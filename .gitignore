@@ -1,0 +1,5 @@
+*.ipa
+.DS_Store
+Original/
+iCreateViews/
+Payload/
