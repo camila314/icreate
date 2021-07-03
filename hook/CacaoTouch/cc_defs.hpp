@@ -187,10 +187,12 @@ public:
     void pasteObjects(std::string str);
     void undoLastAction();
     void redoLastAction();
+    void updateButtons();
     CCMenuItemSpriteExtra* getCreateBtn(int obid, int four);
     cocos2d::CCArray* getSelectedObjects();
     void selectObjects(cocos2d::CCArray* objs, bool keep);
     CLASS_PARAM(LevelEditorLayer*, editorLayer, 0x408);
+    CLASS_PARAM(std::string, clipboard, 0x458);
     CLASS_PARAM(cocos2d::CCArray*, editBars, 0x358);
 };
 

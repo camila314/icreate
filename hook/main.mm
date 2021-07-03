@@ -10,7 +10,7 @@
 extern long base;
 
 using namespace cocos2d;
-#define ANTIPIRACY_ 1
+//#define ANTIPIRACY_ 1
 
 //** SONG BYPASS
 
@@ -34,7 +34,11 @@ void reloadMusic() {
 
                 NSString* str = @"1~|~%@~|~2~|~Song %@~|~3~|~615~|~4~|~camden314~|~5~|~6.9~|~6~|~~|~10~|~localhost~|~7~|~";
                 NSString* out = [NSString stringWithFormat:str, [filename stringByDeletingPathExtension], [filename stringByDeletingPathExtension]];
-                addMusicString([out UTF8String]);
+                //addMusicString([out UTF8String]);
+                if (out.UTF8String && strlen(out.UTF8String)>0) {
+                    addMusicString([out UTF8String]);
+                }
+                //logData(out.UTF8String, std::string("does this have a title (yes or no)"));
         }
     }];
 }
@@ -55,8 +59,9 @@ void songBypass(long instance) { // my hook
     [del retain];
     [del showAlert];
 
-    trampoline_songBypass(instance); // this gonna fail lmao
+    trampoline_songBypass(instance);
 }
+//314
 
 //** SHOW DEGREES FOR ROTATION
 
@@ -92,11 +97,44 @@ void rotateInit(GJRotationControl* slf) {
     slf->addChild(sharedLabel);
     sharedLabel->setPosition(CCPoint(0,40));
     sharedLabel->setScale(0.5);
-
-    SongBypassTool1* del = [[SongBypassTool1 alloc] init];
-    [del retain];
-    [del showAlert];
 }
+//314
+
+//** GLOBAL CLIPBOARD
+
+long original_editorUiKilled;
+__attribute__((naked)) void trampoline_editorUiKilled(EditorUI* instance) {
+    __asm volatile (
+        "stp x20, x19, [sp, #-0x20]!\n"
+        "stp x29, x30, [sp, #0x10]\n"
+        "br %[t]"
+        :
+        : [t] "r" (original_editorUiKilled)
+    );
+}
+
+long original_editorUiMade;
+__attribute__((naked)) void trampoline_editorUiMade(EditorUI* instance, LevelEditorLayer* lel) {
+    __asm volatile (
+        "sub sp, sp, #0xe0\n"
+        "stp d15, d14, [sp, #0x50]\n"
+        "br %[t]"
+        :
+        : [t] "r" (original_editorUiMade)
+    );
+}
+
+std::string g_clipboard;
+void editorUiKilled(EditorUI* slf) {
+    g_clipboard = slf->_clipboard();
+    return trampoline_editorUiKilled(slf);
+}
+void editorUiMade(EditorUI* slf, LevelEditorLayer* lel) {
+    trampoline_editorUiMade(slf, lel);
+    slf->_clipboard() = g_clipboard;
+    slf->updateButtons();
+}
+//314
 
 std::map<long, long>* sus;
 void inject() {
@@ -112,6 +150,8 @@ void inject() {
     ADD_HOOK(0x3a02c, songBypass);
     ADD_HOOK(0x2c4a50, rotateDeg);
     ADD_HOOK(0x2c4914, rotateInit);
+    ADD_HOOK(0x2a5cdc, editorUiMade);
+    ADD_HOOK(0x2a5c28, editorUiKilled);
 
     reloadMusic();
 }

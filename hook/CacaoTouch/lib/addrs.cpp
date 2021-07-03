@@ -55,3 +55,5 @@ CCDictionary* GameLevelManager::getAllUsedSongIds(){return MEMBER_STUB(GameLevel
 
 
 FLAlertLayer* FLAlertLayer::create(void* fdsg, char const* x, const std::string &thing, char const* l, char const* u, float f) {return STATIC_STUB(0x1fe374, FLAlertLayer*, void* fdsg, char const* x, const std::string &thing, char const* l, char const* u, float f)(fdsg,x,thing,l,u,f);}
+
+void EditorUI::updateButtons() {return MEMBER_STUB(EditorUI, 0x2b5754, void, _void)(this, 0);}

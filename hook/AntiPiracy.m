@@ -11,7 +11,7 @@
     alert.alertViewStyle = UIAlertViewStylePlainTextInput;
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
     // objc moment
 
     NSString* determiner = [paths[0] stringByAppendingPathComponent:@"chk"];
@@ -25,7 +25,7 @@
 	NSString* supplied = [alertView textFieldAtIndex:0].text;
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
     // objc moment
 
     NSString* determiner = [paths[0] stringByAppendingPathComponent:@"chk"];
