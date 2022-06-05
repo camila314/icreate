@@ -1,5 +1,4 @@
-*.ipa
 .DS_Store
-Original/
-iCreateViews/
-.ZipComment
+old/
+build/
+Patched/

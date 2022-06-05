@@ -6,11 +6,25 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <dlfcn.h>
 
 extern long base;
 
 using namespace cocos2d;
 //#define ANTIPIRACY_ 1
+
+
+#define TRAMPOLINE(fn, str, ...) \
+    long original_##fn; \
+    __attribute__((naked)) void trampoline_##fn(__VA_ARGS__) { \
+        __asm volatile ( \
+            str \
+            "br %[t]" \
+            : \
+            : [t] "r" (original_##fn) \
+        ); \
+    }
+
 
 //** SONG BYPASS
 
@@ -20,6 +34,7 @@ extern "C" {
 void addMusicString(char const* music) {
     std::string mus(music);
     auto a = MusicDownloadManager::sharedState();
+
     a->addSong(mus);
 }
 void reloadMusic() {
@@ -44,16 +59,12 @@ void reloadMusic() {
 }
 }
 
-long original_songBypass;
-__attribute__((naked)) void trampoline_songBypass(long instance) {
-    __asm volatile (
-        "sub sp, sp, #0x30\n"
-        "stp x20, x19, [sp, #0x10]\n"
-        "br %[t]"
-        : 
-        : [t] "r" (original_songBypass)
-        );
-}
+
+TRAMPOLINE(songBypass,
+    "sub sp, sp, #0x30\n"
+    "stp x20, x19, [sp, #0x10]\n"
+, long)
+
 void songBypass(long instance) { // my hook 
     SongBypassTool1* del = [[SongBypassTool1 alloc] init];
     [del retain];
@@ -66,31 +77,23 @@ void songBypass(long instance) { // my hook
 //** SHOW DEGREES FOR ROTATION
 
 CCLabelBMFont* sharedLabel;
-long original_rotateDeg;
-__attribute__((naked)) void trampoline_rotateDeg(GJRotationControl* instance, CCPoint ccp) {
-    __asm volatile (
-        "sub sp, sp, #0x40\n"
-        "stp d9, d8, [sp, #0x10]\n"
-        "br %[t]"
-        :
-        : [t] "r" (original_rotateDeg)
-    );
-}
+
+TRAMPOLINE(rotateDeg,
+    "sub sp, sp, #0x40\n"
+    "stp d9, d8, [sp, #0x10]\n"
+, GJRotationControl*, CCPoint)
+
 void rotateDeg(GJRotationControl* slf, CCPoint loc) {
     trampoline_rotateDeg(slf, loc);
     sharedLabel->setString(CCString::createWithFormat("%d", (int)slf->_rotation())->getCString());
 }
 
-long original_rotateInit;
-__attribute__((naked)) void trampoline_rotateInit(GJRotationControl* instance) {
-    __asm volatile (
-        "sub sp, sp, #0x30\n"
-        "stp x20, x19, [sp, #0x10]\n"
-        "br %[t]"
-        :
-        : [t] "r" (original_rotateInit)
-    );
-}
+
+TRAMPOLINE(rotateInit,
+    "sub sp, sp, #0x30\n"
+    "stp x20, x19, [sp, #0x10]\n"
+, GJRotationControl*)
+
 void rotateInit(GJRotationControl* slf) {
     trampoline_rotateInit(slf);
     sharedLabel = CCLabelBMFont::create("0", "bigFont.fnt");
@@ -102,33 +105,23 @@ void rotateInit(GJRotationControl* slf) {
 
 //** GLOBAL CLIPBOARD
 
-long original_editorUiKilled;
-__attribute__((naked)) void trampoline_editorUiKilled(EditorUI* instance) {
-    __asm volatile (
-        "stp x20, x19, [sp, #-0x20]!\n"
-        "stp x29, x30, [sp, #0x10]\n"
-        "br %[t]"
-        :
-        : [t] "r" (original_editorUiKilled)
-    );
-}
-
-long original_editorUiMade;
-__attribute__((naked)) void trampoline_editorUiMade(EditorUI* instance, LevelEditorLayer* lel) {
-    __asm volatile (
-        "sub sp, sp, #0xe0\n"
-        "stp d15, d14, [sp, #0x50]\n"
-        "br %[t]"
-        :
-        : [t] "r" (original_editorUiMade)
-    );
-}
+TRAMPOLINE(editorUiKilled,
+    "stp x20, x19, [sp, #-0x20]!\n"
+    "stp x29, x30, [sp, #0x10]\n"
+, EditorUI*)
 
 std::string g_clipboard;
 void editorUiKilled(EditorUI* slf) {
     g_clipboard = slf->_clipboard();
     return trampoline_editorUiKilled(slf);
 }
+
+
+TRAMPOLINE(editorUiMade,
+    "sub sp, sp, #0xe0\n"
+    "stp d15, d14, [sp, #0x50]\n"
+, EditorUI*, LevelEditorLayer*)
+
 void editorUiMade(EditorUI* slf, LevelEditorLayer* lel) {
     trampoline_editorUiMade(slf, lel);
     slf->_clipboard() = g_clipboard;
@@ -136,22 +129,67 @@ void editorUiMade(EditorUI* slf, LevelEditorLayer* lel) {
 }
 //314
 
+//** PRACTICE SONG HACK
+
+TRAMPOLINE(startMusic,
+    "sub sp, sp, #0x70\n"
+    "stp d9, d8, [sp, #0x30]\n"
+, PlayLayer*)
+
+void startMusic(PlayLayer* slf) {
+    auto p = slf->_practiceMode();
+    slf->_practiceMode() = false;
+    trampoline_startMusic(slf);
+    slf->_practiceMode() = p;
+}
+
+TRAMPOLINE(togglePracticeMode,
+    "sub sp, sp, #0x40\n"
+    "stp x20, x19, [sp, #0x20]\n"
+, PlayLayer*, bool)
+
+void togglePracticeMode(PlayLayer* slf, bool p) {
+    if (!slf->_practiceMode() && p) {
+        slf->_practiceMode() = p;
+        slf->_uiLayer()->toggleCheckpointsMenu(p);
+        startMusic(slf);
+        if (p) slf->stopActionByTag(0x12);
+    } else {
+        trampoline_togglePracticeMode(slf, p);
+    }
+}
+
+TRAMPOLINE(playerDestroyed,
+    "stp x20, x19, [sp, #-0x20]!\n"
+    "stp x29, x30, [sp, #0x10]\n"
+, PlayerObject*, bool)
+
+void playerDestroyed(PlayerObject* po, bool d) {
+    GameSoundManager::sharedManager()->stopBackgroundMusic();
+    trampoline_playerDestroyed(po, d);
+}
+
+//314
+
 std::map<long, long>* sus;
 void inject() {
     base = getBase();
-    // piracy lol
-    #ifdef ANTIPIRACY_
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[[AntiPiracy alloc] init] check];
-        });
-    #endif
-    // piracy lol
+
     sus = new std::map<long, long>();
     ADD_HOOK(0x3a02c, songBypass);
     ADD_HOOK(0x2c4a50, rotateDeg);
     ADD_HOOK(0x2c4914, rotateInit);
     ADD_HOOK(0x2a5cdc, editorUiMade);
     ADD_HOOK(0x2a5c28, editorUiKilled);
+    ADD_HOOK(0xaee60, startMusic);
+    ADD_HOOK(0xb8c84, togglePracticeMode);
+    ADD_HOOK(0x14a84c, playerDestroyed);
 
-    reloadMusic();
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+        reloadMusic();
+    });
+
+    NSString* documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0] stringByAppendingPathComponent: @"shit.dylib"];
+    dlopen(documents.UTF8String, RTLD_NOW);
 }

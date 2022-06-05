@@ -196,16 +196,26 @@ public:
     CLASS_PARAM(cocos2d::CCArray*, editBars, 0x358);
 };
 
+class UILayer : public cocos2d::CCLayer {
+ public:
+    void toggleCheckpointsMenu(bool b);
+};
+
+
 class PlayLayer : public GJBaseGameLayer {
 public:
     static PlayLayer* create(GJGameLevel* l);
     static void switchToScene(GJGameLevel* l);
     void resetLevel();
     virtual void update(float);
+    void startMusic();
+    void togglePracticeMode(bool p);
+
     CLASS_PARAM(bool, gameStarted, 0x4dc);
     CLASS_PARAM(float, length, 0x5f8);
+    CLASS_PARAM(UILayer*, uiLayer, 0x708);
     CLASS_PARAM(int, attempt, 0x754);
-    CLASS_PARAM(bool, practiceMode, 0x739);
+    CLASS_PARAM(bool, practiceMode, 0x721);
     CLASS_PARAM(float, time, 0x760);
     STRUCT_PARAM(GameModes, gameModes, 0x76f);
 };
